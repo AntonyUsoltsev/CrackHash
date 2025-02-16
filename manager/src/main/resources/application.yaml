@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: manager
+
+server:
+  port: 8901
+
+app:
+  workers:
+    count: 2
+    baseUrl: ""
