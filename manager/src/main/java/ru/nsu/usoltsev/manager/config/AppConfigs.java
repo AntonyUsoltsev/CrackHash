@@ -1,22 +1,21 @@
 package ru.nsu.usoltsev.manager.config;
 
-import lombok.Data;
 import lombok.Getter;
-import lombok.Setter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
 
+@ConfigurationProperties(prefix = "app")
+@RequiredArgsConstructor
 @Getter
-@Setter
-@ConfigurationProperties(prefix = "app", ignoreUnknownFields = false)
-@Configuration
 public class AppConfigs {
-    private WorkersProperties workers;
+    private final WorkersProperties workers;
 
-    @Data
+    @ConfigurationProperties(prefix = "app.workers")
+    @RequiredArgsConstructor
+    @Getter
     public static class WorkersProperties {
-        private String baseUrl;
-        private Integer count;
+        private final String baseUrl;
+        private final Integer count;
     }
 
 }

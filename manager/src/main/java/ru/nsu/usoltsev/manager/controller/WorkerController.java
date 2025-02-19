@@ -13,9 +13,9 @@ import ru.nsu.usoltsev.manager.model.response.StatusResponseDto;
 
 import java.util.UUID;
 
-@RestController("/internal/api/manager/hash/crack")
+@RestController
 public class WorkerController {
-    @PatchMapping("/request")
+    @PatchMapping("/internal/api/manager/hash/crack/request")
     public void getResultFromWorker() {
         return ;
     }

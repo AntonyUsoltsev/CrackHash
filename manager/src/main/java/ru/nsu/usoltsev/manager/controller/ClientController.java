@@ -1,6 +1,7 @@
 package ru.nsu.usoltsev.manager.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,13 +16,15 @@ import ru.nsu.usoltsev.manager.service.CacheService;
 
 import java.util.UUID;
 
-@RestController("api/hash")
+@Slf4j
+@RestController
+
 @RequiredArgsConstructor
 public class ClientController {
 
     private final CacheService cacheService;
 
-    @PostMapping("/crack")
+    @PostMapping("/api/hash/crack")
     public ResponseEntity<StartCrackResponseDto> startCrackHash(@RequestBody StartCrackRequestDto startCrackRequestDto) {
         UUID uuid = UUID.randomUUID();
         cacheService.updateTaskStatus(uuid, new StatusResponseDto(Status.IN_PROGRESS, null));
@@ -29,7 +32,7 @@ public class ClientController {
         return ResponseEntity.ok(new StartCrackResponseDto(uuid));
     }
 
-    @GetMapping("/status")
+    @GetMapping("/api/hash/status")
     public ResponseEntity<StatusResponseDto> getRequestInfo(@RequestParam UUID requestId) {
         return ResponseEntity.ok(cacheService.getTaskStatus(requestId));
     }

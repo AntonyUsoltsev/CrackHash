@@ -1,6 +1,10 @@
 spring:
   application:
     name: manager
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
+    constructor-detector: use_properties_based
 
 server:
   port: 8901
