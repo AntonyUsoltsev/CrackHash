@@ -12,4 +12,4 @@ server:
 app:
   workers:
     count: 2
-    baseUrl: ""
+    baseUrl: "/internal/api/worker/hash/crack/task"

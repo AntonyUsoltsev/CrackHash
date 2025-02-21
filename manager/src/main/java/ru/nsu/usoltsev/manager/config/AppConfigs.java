@@ -17,5 +17,4 @@ public class AppConfigs {
         private final String baseUrl;
         private final Integer count;
     }
-
 }

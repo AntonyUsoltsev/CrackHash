@@ -13,23 +13,26 @@ import ru.nsu.usoltsev.manager.model.request.StartCrackRequestDto;
 import ru.nsu.usoltsev.manager.model.response.StartCrackResponseDto;
 import ru.nsu.usoltsev.manager.model.response.StatusResponseDto;
 import ru.nsu.usoltsev.manager.service.CacheService;
+import ru.nsu.usoltsev.manager.service.CrackHashService;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RestController
 
 @RequiredArgsConstructor
 public class ClientController {
-
     private final CacheService cacheService;
+    private final CrackHashService crackHashService;
 
     @PostMapping("/api/hash/crack")
     public ResponseEntity<StartCrackResponseDto> startCrackHash(@RequestBody StartCrackRequestDto startCrackRequestDto) {
-        UUID uuid = UUID.randomUUID();
-        cacheService.updateTaskStatus(uuid, new StatusResponseDto(Status.IN_PROGRESS, null));
-        // send to workers
-        return ResponseEntity.ok(new StartCrackResponseDto(uuid));
+        UUID requestId = UUID.randomUUID();
+        cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.IN_PROGRESS, null));
+        CompletableFuture.runAsync(() ->
+                crackHashService.processCrackHashRequest(requestId, startCrackRequestDto.getHash(), startCrackRequestDto.getMaxLength()));
+        return ResponseEntity.ok(new StartCrackResponseDto(requestId));
     }
 
     @GetMapping("/api/hash/status")
