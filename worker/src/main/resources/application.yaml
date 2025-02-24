@@ -1,7 +1,10 @@
 spring:
   application:
     name: worker
-
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
+    constructor-detector: use_properties_based
 
 app:
   manager:

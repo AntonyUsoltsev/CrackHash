@@ -1,52 +1,71 @@
 package ru.nsu.usoltsev.worker.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.paukov.combinatorics3.Generator;
 import org.springframework.stereotype.Service;
 
-import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+@Slf4j
 @Service
 public class WorkerTaskProcessorService {
-    public void processTask(String alphabet, int wordLength, BigInteger startIndex, BigInteger endIndex, String targetHash) {
-        // Генерируем итератор по словам заданной длины
-        List<Character> symbols = alphabet.chars().mapToObj(c -> (char) c).toList();
-        Iterator<List<Character>> iterator = Generator
-                .generateSequence(symbols)
-                .withRepetition(wordLength)
-                .iterator();
+    private static final char[] SYMBOLS = "abcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
 
-        BigInteger currentIndex = BigInteger.ZERO;
-        while (iterator.hasNext() && currentIndex.compareTo(endIndex) <= 0) {
-            List<Character> wordChars = iterator.next();
-            // Если мы ещё не достигли нужного диапазона, пропускаем
-            if (currentIndex.compareTo(startIndex) < 0) {
-                currentIndex = currentIndex.add(BigInteger.ONE);
-                continue;
-            }
+    public List<String> processTask(int maxWordLength, long startIndex, long endIndex, String targetHash) {
+        List<String> matchingWords = new ArrayList<>();
+        long globalCount = 0;
 
-            StringBuilder candidateBuilder = new StringBuilder();
-            wordChars.forEach(candidateBuilder::append);
-            String candidate = candidateBuilder.toString();
-
-            // Вычисляем MD5 хэш для candidate и сравниваем с targetHash
-            // (здесь предполагается, что реализована функция computeMD5)
-            if (computeMD5(candidate).equalsIgnoreCase(targetHash)) {
-                // Если найдено совпадение, можно отправить результат менеджеру
-                reportResultToManager(candidate);
-            }
-            currentIndex = currentIndex.add(BigInteger.ONE);
+        List<Character> symbolsList = new ArrayList<>();
+        for (char c : SYMBOLS) {
+            symbolsList.add(c);
         }
+
+        for (int length = 1; length <= maxWordLength; length++) {
+            if (globalCount >= endIndex) {
+                break;
+            }
+            Iterator<List<Character>> iterator = Generator.permutation(symbolsList)
+                    .withRepetitions(length)
+                    .iterator();
+
+            while (iterator.hasNext() && globalCount < endIndex) {
+                List<Character> wordChars = iterator.next();
+
+                if (globalCount >= startIndex) {
+                    StringBuilder wordBuilder = new StringBuilder();
+                    for (Character ch : wordChars) {
+                        wordBuilder.append(ch);
+                    }
+                    String word = wordBuilder.toString();
+
+                    if (compareMD5Hash(targetHash, word)) {
+                        matchingWords.add(word);
+                    }
+                }
+                globalCount++;
+            }
+        }
+        return matchingWords;
     }
 
-    private String computeMD5(String input) {
-        // Реализуйте вычисление MD5 (например, используя MessageDigest)
-        return "";
-    }
-
-    private void reportResultToManager(String candidate) {
-        // Реализуйте вызов REST API менеджера для передачи найденного результата,
-        // например, с использованием RestTemplate
+    private boolean compareMD5Hash(String targetHash, String word) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(word.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hashBuilder = new StringBuilder();
+            for (byte b : digest) {
+                hashBuilder.append(String.format("%02x", b));
+            }
+            String computedHash = hashBuilder.toString();
+            return computedHash.equals(targetHash);
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Got error while comparing hashes", e);
+            throw new RuntimeException(e);
+        }
     }
 }

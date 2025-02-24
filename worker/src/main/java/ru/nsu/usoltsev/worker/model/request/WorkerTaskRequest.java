@@ -1,4 +1,4 @@
-package ru.nsu.usoltsev.manager.model.request;
+package ru.nsu.usoltsev.worker.model.request;
 
 import lombok.Builder;
 import lombok.Data;

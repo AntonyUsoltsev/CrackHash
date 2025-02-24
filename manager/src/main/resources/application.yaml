@@ -11,5 +11,5 @@ server:
 
 app:
   workers:
-    count: 2
-    baseUrl: "/internal/api/worker/hash/crack/task"
+    count: 1
+    baseUrl: "http://localhost:8080"

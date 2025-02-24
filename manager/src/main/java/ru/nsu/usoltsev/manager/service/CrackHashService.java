@@ -1,6 +1,5 @@
 package ru.nsu.usoltsev.manager.service;
 
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,14 +45,24 @@ public class CrackHashService {
                 end = start.add(chunk);
             }
 
-            WorkerTaskRequest taskRequest = new WorkerTaskRequest(requestId, hash, maxLength, start, end);
+            WorkerTaskRequest taskRequest = WorkerTaskRequest.builder()
+                    .requestId(requestId)
+                    .hash(hash)
+                    .maxLength(maxLength)
+                    .startIndex(start.longValue())
+                    .endIndex(end.longValue())
+                    .chunkNumber(i + 1)
+                    .totalChunks(workerCount)
+                    .build();
             CompletableFuture<List<String>> future = workerClientService.sendTaskToWorker(taskRequest);
             futures.add(future);
             start = end;
         }
 
         try {
-            CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
+                    futures.toArray(new CompletableFuture[0])
+            );
             allFutures.get(60, TimeUnit.SECONDS);
 
             List<String> results = futures.stream()
@@ -65,7 +74,7 @@ public class CrackHashService {
             log.error("Worker request timed out", e);
             cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.ERROR, null));
         } catch (Exception e) {
-            log.error("Got random exception while waiting answers from workers", e);
+            log.error("Exception while waiting for workers' answers", e);
             cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.ERROR, null));
         }
     }
