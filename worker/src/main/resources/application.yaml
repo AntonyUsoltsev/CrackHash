@@ -6,6 +6,9 @@ spring:
       accept-case-insensitive-enums: true
     constructor-detector: use_properties_based
 
+server:
+  port: 8902
+
 app:
   manager:
-    baseUrl: ""
+    baseUrl: "http://localhost:8901"

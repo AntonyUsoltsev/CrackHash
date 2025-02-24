@@ -1,8 +1,12 @@
 package ru.nsu.usoltsev.worker.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.paukov.combinatorics3.Generator;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import ru.nsu.usoltsev.worker.model.request.WorkerTaskRequest;
+import ru.nsu.usoltsev.worker.model.response.WorkerTaskResponse;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -13,10 +17,30 @@ import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class WorkerTaskProcessorService {
+    private final ManagerClientService managerClientService;
+    private final ObjectMapperClient objectMapperClient;
     private static final char[] SYMBOLS = "abcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
 
-    public List<String> processTask(int maxWordLength, long startIndex, long endIndex, String targetHash) {
+    @Async
+    public void processTaskAsync(WorkerTaskRequest workerTaskRequest) {
+        List<String> words = processTask(workerTaskRequest.getMaxLength(),
+                workerTaskRequest.getStartIndex(),
+                workerTaskRequest.getEndIndex(),
+                workerTaskRequest.getHash()
+        );
+        log.info("Matching words: {}", objectMapperClient.objectToJson(words));
+
+        managerClientService.sendResultToManger(WorkerTaskResponse
+                .builder()
+                .requestId(workerTaskRequest.getRequestId())
+                .matchingWords(words)
+                .build()
+        );
+    }
+
+    private List<String> processTask(int maxWordLength, long startIndex, long endIndex, String targetHash) {
         List<String> matchingWords = new ArrayList<>();
         long globalCount = 0;
 

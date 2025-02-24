@@ -12,8 +12,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class WebClientConfig {
     private final AppConfigs appConfigs;
 
-    @Bean("managerWebClient")
-    public WebClient managerWebClient() {
+    @Bean("workerWebClient")
+    public WebClient workerWebClient() {
         AppConfigs.WorkersProperties workersProperties = appConfigs.getWorkers();
         return WebClient
                 .builder()

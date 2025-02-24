@@ -2,20 +2,20 @@ package ru.nsu.usoltsev.manager.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 import ru.nsu.usoltsev.manager.config.AppConfigs;
 import ru.nsu.usoltsev.manager.model.Status;
 import ru.nsu.usoltsev.manager.model.request.WorkerTaskRequest;
 import ru.nsu.usoltsev.manager.model.response.StatusResponseDto;
+import ru.nsu.usoltsev.manager.model.response.WorkerTaskResponse;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Date;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -24,6 +24,10 @@ public class CrackHashService {
     private final WorkerClientService workerClientService;
     private final CacheService cacheService;
     private final AppConfigs appConfigs;
+    private final ThreadPoolTaskScheduler scheduler;
+
+    private final ConcurrentMap<UUID, TaskCollectorService> collectorsMap = new ConcurrentHashMap<>();
+    private final static Integer TIMEOUT = 30;
 
     public void processCrackHashRequest(UUID requestId, String hash, int maxLength) {
         BigInteger totalCombinations = BigInteger.ZERO;
@@ -35,16 +39,13 @@ public class CrackHashService {
         int workerCount = appConfigs.getWorkers().getCount();
         BigInteger chunk = totalCombinations.divide(BigInteger.valueOf(workerCount));
 
-        List<CompletableFuture<List<String>>> futures = new ArrayList<>();
+        TaskCollectorService collector = new TaskCollectorService(workerCount);
+        collectorsMap.put(requestId, collector);
+        cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.IN_PROGRESS, null));
+
         BigInteger start = BigInteger.ZERO;
         for (int i = 0; i < workerCount; i++) {
-            BigInteger end;
-            if (i == workerCount - 1) {
-                end = totalCombinations;
-            } else {
-                end = start.add(chunk);
-            }
-
+            BigInteger end = (i == workerCount - 1) ? totalCombinations : start.add(chunk);
             WorkerTaskRequest taskRequest = WorkerTaskRequest.builder()
                     .requestId(requestId)
                     .hash(hash)
@@ -54,28 +55,31 @@ public class CrackHashService {
                     .chunkNumber(i + 1)
                     .totalChunks(workerCount)
                     .build();
-            CompletableFuture<List<String>> future = workerClientService.sendTaskToWorker(taskRequest);
-            futures.add(future);
+            workerClientService.sendTaskToWorker(taskRequest);
             start = end;
         }
 
-        try {
-            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
-                    futures.toArray(new CompletableFuture[0])
-            );
-            allFutures.get(60, TimeUnit.SECONDS);
+        scheduler.schedule(() -> {
+            if (!collector.isCompleted()) {
+                log.error("Timeout for request {}", requestId);
+                cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.ERROR, null));
+                collectorsMap.remove(requestId);
+            }
+        }, triggerContext -> new Date(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(TIMEOUT)).toInstant());
+    }
 
-            List<String> results = futures.stream()
-                    .map(CompletableFuture::join)
-                    .flatMap(List::stream)
-                    .collect(Collectors.toList());
-            cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.READY, results));
-        } catch (TimeoutException e) {
-            log.error("Worker request timed out", e);
-            cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.ERROR, null));
-        } catch (Exception e) {
-            log.error("Exception while waiting for workers' answers", e);
-            cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.ERROR, null));
+    public void processWorkerResult(WorkerTaskResponse response) {
+        UUID requestId = response.getRequestId();
+        TaskCollectorService collector = collectorsMap.get(requestId);
+        if (collector != null) {
+            collector.addResult(response.getMatchingWords());
+            if (collector.isCompleted()) {
+                log.info("Finished computing matching words for request: {}", requestId);
+                cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.READY, collector.getResults()));
+                collectorsMap.remove(requestId);
+            }
+        } else {
+            log.warn("Get unknown requestId: {} in workers response", requestId);
         }
     }
 }

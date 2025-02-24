@@ -11,5 +11,5 @@ server:
 
 app:
   workers:
-    count: 1
-    baseUrl: "http://localhost:8080"
+    count: 8
+    baseUrl: "http://localhost:8902"

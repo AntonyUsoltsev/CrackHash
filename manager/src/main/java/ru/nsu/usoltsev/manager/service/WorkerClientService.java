@@ -14,12 +14,12 @@ import java.util.concurrent.CompletableFuture;
 @Service
 @RequiredArgsConstructor
 public class WorkerClientService {
-    private final WebClient managerWebClient;
+    private final WebClient workerWebClient;
     private final ObjectMapperClient objectMapperClient;
 
     public CompletableFuture<List<String>> sendTaskToWorker(WorkerTaskRequest task) {
         log.info("sendTaskWorker(): task: {}", objectMapperClient.objectToJson(task));
-        return managerWebClient.post()
+        return workerWebClient.post()
                 .uri("/internal/api/worker/hash/crack/task")
                 .bodyValue(task)
                 .retrieve()
