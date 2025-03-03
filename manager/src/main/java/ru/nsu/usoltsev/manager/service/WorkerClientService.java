@@ -5,10 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import ru.nsu.usoltsev.manager.model.request.WorkerTaskRequest;
-import ru.nsu.usoltsev.manager.model.response.WorkerTaskResponse;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -17,14 +13,13 @@ public class WorkerClientService {
     private final WebClient workerWebClient;
     private final ObjectMapperClient objectMapperClient;
 
-    public CompletableFuture<List<String>> sendTaskToWorker(WorkerTaskRequest task) {
+    public void sendTaskToWorker(WorkerTaskRequest task) {
         log.info("sendTaskWorker(): task: {}", objectMapperClient.objectToJson(task));
-        return workerWebClient.post()
+        workerWebClient.post()
                 .uri("/internal/api/worker/hash/crack/task")
                 .bodyValue(task)
                 .retrieve()
-                .bodyToMono(WorkerTaskResponse.class)
-                .map(WorkerTaskResponse::getMatchingWords)
-                .toFuture();
+                .toBodilessEntity()
+                .block();
     }
 }

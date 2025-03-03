@@ -1,0 +1,3 @@
+app:
+  manager:
+    baseUrl: "http://localhost:8901"

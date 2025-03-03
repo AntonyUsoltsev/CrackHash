@@ -1,0 +1,4 @@
+app:
+  workers:
+    count: 4
+    baseUrl: "http://localhost:8902"

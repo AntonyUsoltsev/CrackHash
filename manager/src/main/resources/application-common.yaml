@@ -1,14 +1,15 @@
 spring:
   application:
-    name: worker
+    name: manager
   jackson:
     mapper:
       accept-case-insensitive-enums: true
     constructor-detector: use_properties_based
 
 server:
-  port: 8902
+  port: 8901
 
 app:
-  manager:
-    baseUrl: "http://localhost:8901"
+  workers:
+    count: ${APP_WORKERS_COUNT}
+    baseUrl: ${APP_WORKERS_BASEURL}
