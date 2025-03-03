@@ -1,0 +1,47 @@
+services:
+  nginx:
+    image: nginx:1.23.3
+    ports:
+      - "80:80"
+    networks:
+      - crack_hash_network
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - worker
+
+  manager:
+    build:
+      context: .
+      dockerfile: manager/Dockerfile
+    image: manager:latest
+    environment:
+      - APP_WORKERS_COUNT=4
+      - APP_WORKERS_BASEURL=http://nginx:80
+      - SPRING_PROFILES_ACTIVE=common
+    ports:
+      - "8901:8901"
+    networks:
+      - crack_hash_network
+    depends_on:
+      - nginx
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    image: worker:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=common
+      - APP_MANAGER_BASEURL=http://manager:8901
+    expose:
+      - "8902"
+    deploy:
+      replicas: 4
+      mode: replicated
+    networks:
+      - crack_hash_network
+
+networks:
+  crack_hash_network:
+    driver: bridge
