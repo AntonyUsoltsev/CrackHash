@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import ru.nsu.usoltsev.worker.model.request.WorkerTaskRequest;
 import ru.nsu.usoltsev.worker.model.response.WorkerTaskResponse;
 
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -23,11 +24,28 @@ public class WorkerTaskProcessorService {
     private final ObjectMapperClient objectMapperClient;
     private static final char[] SYMBOLS = "abcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
 
-    @Async
+    @Async("taskHandlerExecutor")
     public void processTaskAsync(WorkerTaskRequest workerTaskRequest) {
+        BigInteger totalCombinations = BigInteger.ZERO;
+        BigInteger base = BigInteger.valueOf(SYMBOLS.length);
+        for (int k = 1; k <= workerTaskRequest.getMaxLength(); k++) {
+            totalCombinations = totalCombinations.add(base.pow(k));
+        }
+
+        int chunkNumber = workerTaskRequest.getChunkNumber();
+        int totalChunks = workerTaskRequest.getTotalChunks();
+
+        BigInteger chunkSize = totalCombinations.divide(BigInteger.valueOf(totalChunks));
+        BigInteger startIndex = chunkSize.multiply(BigInteger.valueOf(chunkNumber - 1));
+        BigInteger endIndex = (chunkNumber == totalChunks)
+                ? totalCombinations
+                : chunkSize.multiply(BigInteger.valueOf(chunkNumber));
+
+        log.info("Start with sInd: {} and eInd: {}", startIndex.longValue(), endIndex.longValue());
+
         List<String> words = processTask(workerTaskRequest.getMaxLength(),
-                workerTaskRequest.getStartIndex(),
-                workerTaskRequest.getEndIndex(),
+                startIndex.longValue(),
+                endIndex.longValue(),
                 workerTaskRequest.getHash()
         );
         log.info("Matching words: {}", objectMapperClient.objectToJson(words));

@@ -4,7 +4,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
-import java.math.BigInteger;
 import java.util.UUID;
 
 @Data
@@ -14,8 +13,6 @@ public class WorkerTaskRequest {
     private final UUID requestId;
     private final String hash;
     private final int maxLength;
-    private final long startIndex;
-    private final long endIndex;
     private final int chunkNumber;
     private final int totalChunks;
 }

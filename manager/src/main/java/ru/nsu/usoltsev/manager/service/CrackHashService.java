@@ -10,7 +10,7 @@ import ru.nsu.usoltsev.manager.model.request.WorkerTaskRequest;
 import ru.nsu.usoltsev.manager.model.response.StatusResponseDto;
 import ru.nsu.usoltsev.manager.model.response.WorkerTaskResponse;
 
-import java.math.BigInteger;
+import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,45 +27,34 @@ public class CrackHashService {
     private final ThreadPoolTaskScheduler scheduler;
 
     private final ConcurrentMap<UUID, TaskCollectorService> collectorsMap = new ConcurrentHashMap<>();
-    private final static Integer TIMEOUT = 30;
+    private final static Integer TIMEOUT = 100;
 
     public void processCrackHashRequest(UUID requestId, String hash, int maxLength) {
-        BigInteger totalCombinations = BigInteger.ZERO;
-        BigInteger base = BigInteger.valueOf(36);
-        for (int k = 1; k <= maxLength; k++) {
-            totalCombinations = totalCombinations.add(base.pow(k));
-        }
-
         int workerCount = appConfigs.getWorkers().getCount();
-        BigInteger chunk = totalCombinations.divide(BigInteger.valueOf(workerCount));
 
         TaskCollectorService collector = new TaskCollectorService(workerCount);
         collectorsMap.put(requestId, collector);
         cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.IN_PROGRESS, null));
 
-        BigInteger start = BigInteger.ZERO;
         for (int i = 0; i < workerCount; i++) {
-            BigInteger end = (i == workerCount - 1) ? totalCombinations : start.add(chunk);
             WorkerTaskRequest taskRequest = WorkerTaskRequest.builder()
                     .requestId(requestId)
                     .hash(hash)
                     .maxLength(maxLength)
-                    .startIndex(start.longValue())
-                    .endIndex(end.longValue())
                     .chunkNumber(i + 1)
                     .totalChunks(workerCount)
                     .build();
             workerClientService.sendTaskToWorker(taskRequest);
-            start = end;
         }
 
+        Instant timeoutDate = new Date(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(TIMEOUT)).toInstant();
         scheduler.schedule(() -> {
             if (!collector.isCompleted()) {
                 log.error("Timeout for request {}", requestId);
                 cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.ERROR, null));
                 collectorsMap.remove(requestId);
             }
-        }, triggerContext -> new Date(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(TIMEOUT)).toInstant());
+        }, timeoutDate);
     }
 
     public void processWorkerResult(WorkerTaskResponse response) {
