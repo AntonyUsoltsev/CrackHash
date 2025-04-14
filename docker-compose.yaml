@@ -1,14 +1,71 @@
 services:
-  nginx:
-    image: nginx:1.23.3
+#  mongo1:
+#    image: mongo:6.0
+#    hostname: mongo1
+#    ports:
+#      - "27017:27017"
+#    command: [ "mongod", "--replSet", "rs0", "--bind_ip_all" ]
+#    environment:
+#      - MONGODB_EXTRA_ARGS="--bind_ip_all --replSet rs0"
+#    volumes:
+#      - ./mongo1:/data/db
+#    networks:
+#      - crack_hash_network
+#
+#  mongo2:
+#    image: mongo:6.0
+#    hostname: mongo2
+#    command: [ "mongod", "--replSet", "rs0", "--bind_ip_all" ]
+#    environment:
+#      - MONGODB_EXTRA_ARGS="--bind_ip_all --replSet rs0"
+#    volumes:
+#      - ./mongo2:/data/db
+#    networks:
+#      - crack_hash_network
+#
+#  mongo3:
+#    image: mongo:6.0
+#    hostname: mongo3
+#    command: [ "mongod", "--replSet", "rs0", "--bind_ip_all" ]
+#    environment:
+#      - MONGODB_EXTRA_ARGS="--bind_ip_all --replSet rs0"
+#    volumes:
+#      - ./mongo3:/data/db
+#    networks:
+#      - crack_hash_network
+#
+#  mongo-init-replica:
+#    image: mongo:6.0
+#    depends_on:
+#      - mongo1
+#      - mongo2
+#      - mongo3
+#    entrypoint: >
+#      bash -c 'sleep 10 &&
+#      mongosh --host mongo1:27017 --eval "
+#        rs.initiate({
+#          _id: \"rs0\",
+#          members: [
+#            { _id: 0, host: \"mongo1:27017\" },
+#            { _id: 1, host: \"mongo2:27017\" },
+#            { _id: 2, host: \"mongo3:27017\" }
+#          ]
+#        })"'
+#    networks:
+#      - crack_hash_network
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
     ports:
-      - "80:80"
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
     networks:
       - crack_hash_network
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-    depends_on:
-      - worker
 
   manager:
     build:
@@ -16,15 +73,30 @@ services:
       dockerfile: manager/Dockerfile
     image: manager:latest
     environment:
-      - APP_WORKERS_COUNT=8
-      - APP_WORKERS_BASEURL=http://nginx:80
+      - APP_WORKERS_COUNT=2
       - SPRING_PROFILES_ACTIVE=common
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USER=guest
+      - SPRING_RABBITMQ_PASS=guest
     ports:
       - "8901:8901"
     networks:
       - crack_hash_network
     depends_on:
-      - nginx
+#      mongo1:
+#        condition: service_started
+#      mongo2:
+#        condition: service_started
+#      mongo3:
+#        condition: service_started
+      rabbitmq:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://manager:8080/actuator/health" ]
+      interval: 7s
+      timeout: 5s
+      retries: 5
 
   worker:
     build:
@@ -33,14 +105,20 @@ services:
     image: worker:latest
     environment:
       - SPRING_PROFILES_ACTIVE=common
-      - APP_MANAGER_BASEURL=http://manager:8901
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USER=guest
+      - SPRING_RABBITMQ_PASS=guest
     expose:
       - "8902"
     deploy:
-      replicas: 8
+      replicas: 2
       mode: replicated
     networks:
       - crack_hash_network
+
+volumes:
+  rabbitmq_data:
 
 networks:
   crack_hash_network:

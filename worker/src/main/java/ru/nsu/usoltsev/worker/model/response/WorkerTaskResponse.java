@@ -12,5 +12,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WorkerTaskResponse {
     private final UUID requestId;
+    private final int chunkNumber;
     private final List<String> matchingWords;
 }

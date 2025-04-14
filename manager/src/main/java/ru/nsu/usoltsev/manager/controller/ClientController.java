@@ -20,7 +20,6 @@ import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RestController
-
 @RequiredArgsConstructor
 public class ClientController {
     private final CacheService cacheService;
