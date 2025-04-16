@@ -11,6 +11,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WorkerTaskRequest {
     private final UUID requestId;
+    private final UUID taskId;
     private final String hash;
     private final int maxLength;
     private final int chunkNumber;

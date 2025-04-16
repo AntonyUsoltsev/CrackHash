@@ -53,10 +53,12 @@ public class WorkerTaskProcessorService {
         managerClientService.sendResultToManger(WorkerTaskResponse
                 .builder()
                 .requestId(workerTaskRequest.getRequestId())
+                .taskId(workerTaskRequest.getTaskId())
                 .chunkNumber(chunkNumber)
                 .matchingWords(words)
                 .build()
         );
+        channel.basicAck(tag, false);
     }
 
     private List<String> processTask(int maxWordLength, long startIndex, long endIndex, String targetHash) {

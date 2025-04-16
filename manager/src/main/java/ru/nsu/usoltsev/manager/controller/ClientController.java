@@ -8,15 +8,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import ru.nsu.usoltsev.manager.model.Status;
+import ru.nsu.usoltsev.manager.model.entity.Task;
 import ru.nsu.usoltsev.manager.model.request.StartCrackRequestDto;
 import ru.nsu.usoltsev.manager.model.response.StartCrackResponseDto;
 import ru.nsu.usoltsev.manager.model.response.StatusResponseDto;
 import ru.nsu.usoltsev.manager.service.CacheService;
 import ru.nsu.usoltsev.manager.service.CrackHashService;
+import ru.nsu.usoltsev.manager.service.MongoService;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RestController
@@ -24,14 +24,13 @@ import java.util.concurrent.CompletableFuture;
 public class ClientController {
     private final CacheService cacheService;
     private final CrackHashService crackHashService;
+    private final MongoService mongoService;
 
     @PostMapping("/api/hash/crack")
     public ResponseEntity<StartCrackResponseDto> startCrackHash(@RequestBody StartCrackRequestDto startCrackRequestDto) {
-        UUID requestId = UUID.randomUUID();
-        cacheService.updateTaskStatus(requestId, new StatusResponseDto(Status.IN_PROGRESS, null));
-        CompletableFuture.runAsync(() ->
-                crackHashService.processCrackHashRequest(requestId, startCrackRequestDto.getHash(), startCrackRequestDto.getMaxLength()));
-        return ResponseEntity.ok(new StartCrackResponseDto(requestId));
+        Task task = mongoService.createNewTask(startCrackRequestDto.getHash(), startCrackRequestDto.getMaxLength());
+        crackHashService.processCrackHashRequest(task.getId(), startCrackRequestDto.getHash(), startCrackRequestDto.getMaxLength());
+        return ResponseEntity.ok(new StartCrackResponseDto(task.getId()));
     }
 
     @GetMapping("/api/hash/status")

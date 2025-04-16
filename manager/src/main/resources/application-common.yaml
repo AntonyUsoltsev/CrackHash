@@ -1,8 +1,8 @@
 spring:
-#  data:
-#    mongodb:
-#      uri: mongodb://mongo1:27017,mongo2:27017,mongo3:27017/db?replicaSet=rs0&w=majority&wtimeoutMS=30000
-#      database: db
+  data:
+    mongodb:
+      uri: mongodb://mongo1:27017,mongo2:27017,mongo3:27017/db?replicaSet=rs0&w=majority&wtimeoutMS=30000
+      database: db
 
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST}

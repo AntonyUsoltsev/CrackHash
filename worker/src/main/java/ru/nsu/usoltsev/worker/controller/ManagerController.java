@@ -23,7 +23,7 @@ public class ManagerController {
                            @Header(AmqpHeaders.DELIVERY_TAG) long tag,
                            Channel channel) throws Exception {
         try {
-            log.info("Received task from manager: {}", taskRequest.getRequestId());
+            log.info("Received task: {} from manager request: {}", taskRequest.getTaskId(), taskRequest.getRequestId());
             taskProcessorService.processTaskAsync(taskRequest, tag, channel);
         } catch (Exception e) {
             log.error("Failed to process task", e);
