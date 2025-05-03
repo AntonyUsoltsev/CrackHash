@@ -1,5 +1,6 @@
 package ru.nsu.usoltsev.worker.service;
 
+import com.rabbitmq.client.Channel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.paukov.combinatorics3.Generator;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import ru.nsu.usoltsev.worker.model.request.WorkerTaskRequest;
 import ru.nsu.usoltsev.worker.model.response.WorkerTaskResponse;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -24,8 +26,7 @@ public class WorkerTaskProcessorService {
     private final ObjectMapperClient objectMapperClient;
     private static final char[] SYMBOLS = "abcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
 
-    @Async("taskHandlerExecutor")
-    public void processTaskAsync(WorkerTaskRequest workerTaskRequest) {
+    public void processTask(WorkerTaskRequest workerTaskRequest, long tag, Channel channel) throws IOException {
         BigInteger totalCombinations = BigInteger.ZERO;
         BigInteger base = BigInteger.valueOf(SYMBOLS.length);
         for (int k = 1; k <= workerTaskRequest.getMaxLength(); k++) {
@@ -41,8 +42,6 @@ public class WorkerTaskProcessorService {
                 ? totalCombinations
                 : chunkSize.multiply(BigInteger.valueOf(chunkNumber));
 
-        log.info("Start with sInd: {} and eInd: {}", startIndex.longValue(), endIndex.longValue());
-
         List<String> words = processTask(workerTaskRequest.getMaxLength(),
                 startIndex.longValue(),
                 endIndex.longValue(),
@@ -53,6 +52,8 @@ public class WorkerTaskProcessorService {
         managerClientService.sendResultToManger(WorkerTaskResponse
                 .builder()
                 .requestId(workerTaskRequest.getRequestId())
+                .taskId(workerTaskRequest.getTaskId())
+                .chunkNumber(chunkNumber)
                 .matchingWords(words)
                 .build()
         );

@@ -2,24 +2,28 @@ package ru.nsu.usoltsev.worker.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.MessageDeliveryMode;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import ru.nsu.usoltsev.worker.model.response.WorkerTaskResponse;
+
+import static ru.nsu.usoltsev.worker.config.RabbitMqConfig.WORKER_TO_MANAGER_EXCHANGE;
+import static ru.nsu.usoltsev.worker.config.RabbitMqConfig.WORKER_TO_MANAGER_ROUTING_KEY;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ManagerClientService {
-    private final WebClient managerWebClient;
+
+    private final RabbitTemplate rabbitTemplate;
     private final ObjectMapperClient objectMapperClient;
 
-    public void sendResultToManger(WorkerTaskResponse result) {
-        log.info("sendResultToManger(): result: {}", objectMapperClient.objectToJson(result));
-        managerWebClient.patch()
-                .uri("/internal/api/manager/hash/crack/request")
-                .bodyValue(result)
-                .retrieve()
-                .toBodilessEntity()
-                .block();
+    public void sendResultToManger(WorkerTaskResponse response) {
+        rabbitTemplate.convertAndSend(WORKER_TO_MANAGER_EXCHANGE, WORKER_TO_MANAGER_ROUTING_KEY, response, message -> {
+            message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
+            message.getMessageProperties().setHeader("deduplication-id", response.getRequestId() + "-" + response.getTaskId());
+            return message;
+        });
+        log.info("Sending result to manager via RabbitMQ: {}", objectMapperClient.objectToJson(response));
     }
 }

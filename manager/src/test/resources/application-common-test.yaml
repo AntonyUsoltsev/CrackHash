@@ -1,10 +1,31 @@
 spring:
+  data:
+    mongodb:
+      uri: mongodb://mongo1:27017,mongo2:27017,mongo3:27017/db?replicaSet=rs0&w=majority&wtimeoutMS=30000
+      database: db
+
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST}
+    port: ${SPRING_RABBITMQ_PORT}
+    username: ${SPRING_RABBITMQ_USER}
+    password: ${SPRING_RABBITMQ_PASS}
+    listener:
+      simple:
+        acknowledge-mode: manual
+        retry:
+          enabled: true
+          max-attempts: 5
+        prefetch: 1
+
   application:
     name: manager
+
   jackson:
     mapper:
       accept-case-insensitive-enums: true
     constructor-detector: use_properties_based
+    serialization:
+      indent_output: true
 
 server:
   port: 8901
@@ -12,4 +33,11 @@ server:
 app:
   workers:
     count: ${APP_WORKERS_COUNT}
-    baseUrl: ${APP_WORKERS_BASEURL}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info

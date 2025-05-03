@@ -29,4 +29,19 @@ public class LoggingAspect {
                     joinPoint.getSignature().getName());
         }
     }
+
+    @Before("execution(* ru.nsu.usoltsev.manager.service.MongoService.*(..))")
+    public void logBeforeMongoService(JoinPoint joinPoint) throws Throwable {
+        if (joinPoint.getArgs() != null && joinPoint.getArgs().length > 0) {
+            String body = objectMapper.writeValueAsString(joinPoint.getArgs()[0]);
+            log.info("Target method {}.{}, body: {}",
+                    joinPoint.getTarget().getClass().getSimpleName(),
+                    joinPoint.getSignature().getName(),
+                    body);
+        } else {
+            log.info("Target method {}.{}",
+                    joinPoint.getTarget().getClass().getSimpleName(),
+                    joinPoint.getSignature().getName());
+        }
+    }
 }

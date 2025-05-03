@@ -1,4 +1,10 @@
+spring:
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: guest1
+    password: guest1
+
 app:
   workers:
-    count: 4
-    baseUrl: "http://localhost:8902"
+    count: 2
