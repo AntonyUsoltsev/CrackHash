@@ -2,6 +2,7 @@ package ru.nsu.usoltsev.worker.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.MessageDeliveryMode;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import ru.nsu.usoltsev.worker.model.response.WorkerTaskResponse;
@@ -18,7 +19,11 @@ public class ManagerClientService {
     private final ObjectMapperClient objectMapperClient;
 
     public void sendResultToManger(WorkerTaskResponse response) {
+        rabbitTemplate.convertAndSend(WORKER_TO_MANAGER_EXCHANGE, WORKER_TO_MANAGER_ROUTING_KEY, response, message -> {
+            message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
+            message.getMessageProperties().setHeader("deduplication-id", response.getRequestId() + "-" + response.getTaskId());
+            return message;
+        });
         log.info("Sending result to manager via RabbitMQ: {}", objectMapperClient.objectToJson(response));
-        rabbitTemplate.convertAndSend(WORKER_TO_MANAGER_EXCHANGE, WORKER_TO_MANAGER_ROUTING_KEY, response);
     }
 }

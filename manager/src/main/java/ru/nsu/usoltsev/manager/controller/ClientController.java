@@ -8,11 +8,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import ru.nsu.usoltsev.manager.model.Status;
 import ru.nsu.usoltsev.manager.model.entity.Task;
 import ru.nsu.usoltsev.manager.model.request.StartCrackRequestDto;
 import ru.nsu.usoltsev.manager.model.response.StartCrackResponseDto;
 import ru.nsu.usoltsev.manager.model.response.StatusResponseDto;
-import ru.nsu.usoltsev.manager.service.CacheService;
 import ru.nsu.usoltsev.manager.service.CrackHashService;
 import ru.nsu.usoltsev.manager.service.MongoService;
 
@@ -22,7 +22,6 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 public class ClientController {
-    private final CacheService cacheService;
     private final CrackHashService crackHashService;
     private final MongoService mongoService;
 
@@ -35,6 +34,10 @@ public class ClientController {
 
     @GetMapping("/api/hash/status")
     public ResponseEntity<StatusResponseDto> getRequestInfo(@RequestParam UUID requestId) {
-        return ResponseEntity.ok(cacheService.getTaskStatus(requestId));
+        Task task = mongoService.getTask(requestId);
+        return ResponseEntity.ok(StatusResponseDto.builder()
+                .status(Status.forStr(task.getStatus()))
+                .data(task.getTaskResults())
+                .build());
     }
 }

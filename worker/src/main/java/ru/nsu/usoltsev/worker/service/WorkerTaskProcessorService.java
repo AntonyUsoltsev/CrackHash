@@ -26,8 +26,7 @@ public class WorkerTaskProcessorService {
     private final ObjectMapperClient objectMapperClient;
     private static final char[] SYMBOLS = "abcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
 
-    @Async("taskHandlerExecutor")
-    public void processTaskAsync(WorkerTaskRequest workerTaskRequest, long tag, Channel channel) throws IOException {
+    public void processTask(WorkerTaskRequest workerTaskRequest, long tag, Channel channel) throws IOException {
         BigInteger totalCombinations = BigInteger.ZERO;
         BigInteger base = BigInteger.valueOf(SYMBOLS.length);
         for (int k = 1; k <= workerTaskRequest.getMaxLength(); k++) {
@@ -58,7 +57,6 @@ public class WorkerTaskProcessorService {
                 .matchingWords(words)
                 .build()
         );
-        channel.basicAck(tag, false);
     }
 
     private List<String> processTask(int maxWordLength, long startIndex, long endIndex, String targetHash) {

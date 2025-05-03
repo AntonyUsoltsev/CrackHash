@@ -18,13 +18,17 @@ import static ru.nsu.usoltsev.worker.config.RabbitMqConfig.MANAGER_TO_WORKER_QUE
 public class ManagerController {
     private final WorkerTaskProcessorService taskProcessorService;
 
-    @RabbitListener(queues = MANAGER_TO_WORKER_QUEUE)
+    @RabbitListener(
+            queues = MANAGER_TO_WORKER_QUEUE,
+            containerFactory = "rabbitListenerContainerFactory"
+    )
     public void handleTask(WorkerTaskRequest taskRequest,
                            @Header(AmqpHeaders.DELIVERY_TAG) long tag,
                            Channel channel) throws Exception {
         try {
             log.info("Received task: {} from manager request: {}", taskRequest.getTaskId(), taskRequest.getRequestId());
-            taskProcessorService.processTaskAsync(taskRequest, tag, channel);
+            taskProcessorService.processTask(taskRequest, tag, channel);
+            channel.basicAck(tag, false);
         } catch (Exception e) {
             log.error("Failed to process task", e);
             channel.basicNack(tag, false, true);
